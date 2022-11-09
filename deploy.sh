@@ -36,7 +36,7 @@ echo 'export PATH=$PATH:/usr/local/go/bin'>>~/.bashrc
 # Build and install Caddy + ForwardProxy
 
 go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
-~/go/bin/xcaddy build --with github.com/caddyserver/forwardproxy@caddy2=github.com/klzgrad/forwardproxy@naive
+~/go/bin/xcaddy build --with github.com/caddyserver/forwardproxy@caddy2=github.com/sagernet/forwardproxy@latest
 install ./caddy /usr/local/bin/caddy
 rm ./caddy
 
