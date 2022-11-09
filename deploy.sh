@@ -119,7 +119,7 @@ nft list ruleset > /etc/nftables.conf
 # Enable BBR congestion control. I'm still not completely convinced
 # about this. But it looks like it could be good.
 
-cat >> /etc/sysctl.d/50-bbr.conf <<EOF
+cat >/etc/sysctl.d/50-bbr.conf <<EOF
 net.core.default_qdisc=fq
 net.ipv4.tcp_congestion_control=bbr
 EOF
