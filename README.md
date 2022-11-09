@@ -21,9 +21,12 @@ used in your client of your choice.
 
 # Clients
 
-On Android you can use the SagerNet client. If you manually setup the
-client, do not forget to enable UDP over TCP (if you need voice/video
-calls to work, or anything else requiring UDP).
+On Android you can use the [SagerNet][2] client. If you manually setup
+the client, do not forget to enable UDP over TCP (if you need
+voice/video calls to work, or anything else requiring UDP).
 
 On Linux, you can put the json config printed by the script in the
 config.json file required by the client.
+
+[1]: https://github.com/klzgrad/naiveproxy
+[2]: https://sagernet.org/
