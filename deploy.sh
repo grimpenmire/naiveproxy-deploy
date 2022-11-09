@@ -14,7 +14,50 @@ fi
 
 SSL_EMAIL="${VARIABLE:-mahsa@${DOMAIN}}"
 
-apt install -y tinyproxy haproxy nginx nftables
+# Install packages
+
+apt install -y nftables
+
+# Download a sample blog to camouflage as a normal website
+
+curl -L https://github.com/arcdetri/sample-blog/archive/master.tar.gz | tar -C /tmp -zxf -
+mkdir -p /var/www/html
+mv /tmp/sample-blog-master/html/* /var/www/html
+
+# Install golang
+
+curl -L https://go.dev/dl/go1.19.3.linux-amd64.tar.gz -o golang.tar.gz
+rm -rf /usr/local/go
+tar -C /usr/local -xzf golang.tar.gz
+rm golang.tar.gz
+export PATH=$PATH:/usr/local/go/bin
+echo 'export PATH=$PATH:/usr/local/go/bin'>>~/.bashrc
+
+# Build and install Caddy + ForwardProxy
+
+go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+~/go/bin/xcaddy build --with github.com/caddyserver/forwardproxy@caddy2=github.com/klzgrad/forwardproxy@naive
+install ./caddy /usr/local/bin/caddy
+rm ./caddy
+
+mkdir -p /etc/caddy
+cat >/etc/caddy/Caddyfile <<EOF
+{
+  order forward_proxy before file_server
+}
+:443, ${DOMAIN} {
+  tls ${SSL_EMAIL}
+  forward_proxy {
+    basic_auth mahsa ${PASSWORD}
+    hide_ip
+    hide_via
+    probe_resistance
+  }
+  file_server {
+    root /var/www/html
+  }
+}
+EOF
 
 # Setup firewall
 
@@ -22,7 +65,8 @@ systemctl enable nftables
 systemctl start nftables
 
 # accept related traffic, internal traffic, and ping requests
-nft flush table filter  # clear before adding; useful mostly for tests where we run this many times
+nft flush table inet filter  # clear before adding; useful mostly for tests where we run this many times
+nft add table filter
 nft add rule inet filter input ct state related,established counter accept
 nft add rule inet filter input iif lo counter accept
 nft add rule inet filter input ip protocol icmp icmp type echo-request counter accept
@@ -46,95 +90,5 @@ net.core.default_qdisc=fq
 net.ipv4.tcp_congestion_control=bbr
 EOF
 sysctl -p /etc/sysctl.d/50-bbr.conf
-
-# Setup acme
-
-git clone https://github.com/Neilpang/acme.sh.git
-cd ./acme.sh
-./acme.sh --install
-cd ..
-
-rm -rf acme.sh
-shopt -s expand_aliases
-export LE_WORKING_DIR=~/.acme.sh
-alias acme.sh=~/.acme.sh/acme.sh
-
-# Setup a sample blog to camouflage as a normal website
-
-curl -L https://github.com/arcdetri/sample-blog/archive/master.tar.gz | tar -C /tmp -zxf -
-mv /tmp/sample-blog-master/html/* /var/www/html
-
-# Obtain certificates
-
-acme.sh --register-account -m ${SSL_EMAIL}
-
-RENEW_SKIP=2
-ret=0
-acme.sh -k ec-256 -d ${DOMAIN} --issue -w /var/www/html || ret=$?
-[ "$ret" != "$RENEW_SKIP" ] && [ "$ret" != "0" ] && exit 1;
-ret=0
-acme.sh -k 2048 -d ${DOMAIN} --issue -w /var/www/html || ret=$?
-[ "$ret" != "$RENEW_SKIP" ] && [ "$ret" != "0" ] && exit 1;
-
-# Install certificates for use by haproxy, and setup crontabs for
-# renewing them
-mkdir -p /etc/haproxy/certs
-acme.sh --install-cert --ecc -d ${DOMAIN} --key-file /tmp/${DOMAIN}.key --fullchain-file /tmp/${DOMAIN}.crt --reloadcmd "cat /tmp/${DOMAIN}.* >/etc/haproxy/certs/${DOMAIN}.pem.ecdsa; rm /tmp/${DOMAIN}.*; systemctl restart haproxy"
-acme.sh --install-cert -d ${DOMAIN} --key-file /tmp/${DOMAIN}.key --fullchain-file /tmp/${DOMAIN}.crt --reloadcmd "cat /tmp/${DOMAIN}.* >/etc/haproxy/certs/${DOMAIN}.pem.rsa; rm /tmp/${DOMAIN}.*; systemctl restart haproxy"
-
-# Configure tinyproxy (forward proxy) and haproxy (reverse proxy)
-
-cat >/etc/tinyproxy/tinyproxy.conf <<EOF
-User tinyproxy
-Group tinyproxy
-PidFile "/run/tinyproxy/tinyproxy.pid"
-MaxClients 100
-MinSpareServers 5
-MaxSpareServers 20
-StartServers 10
-Port 8888
-
-Listen 127.0.0.1
-LogFile "/dev/null"
-DisableViaHeader Yes
-EOF
-
-cat >/etc/haproxy/haproxy.cfg <<EOF
-userlist users
-        user mahsa insecure-password ${PASSWORD}
-
-global
-        log stdout local0 debug
-
-defaults
-        mode http
-        log global
-        option httplog
-        timeout connect 5s
-        timeout client 30s
-        timeout server 30s
-
-frontend haproxy_tls
-        bind :443 ssl crt /etc/haproxy/certs/ alpn h2,http/1.1
-        option http-use-proxy-header
-        acl login base_dom login-key.test
-        acl auth_ok http_auth(users)
-        http-request auth realm proxyserver if login !auth_ok
-        http-request redirect location https://google.com if login auth_ok
-        use_backend proxy if auth_ok
-        default_backend masquerade
-
-backend proxy
-        mode http
-        http-request del-header proxy-authorization
-        server proxy 127.0.0.1:8888
-
-backend masquerade
-        mode http
-        server nginx 127.0.0.1:80
-EOF
-
-echo "Restarting tinyproxy and haproxy..."
-systemctl restart tinyproxy haproxy
 
 echo "Done."
