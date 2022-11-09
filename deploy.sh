@@ -131,6 +131,7 @@ systemctl daemon-reload
 systemctl enable caddy
 systemctl start caddy
 
+echo
 echo "Config URL: naive+https://mahsa:${PASSWORD}@${DOMAIN}:443?udp-over-tcp=true"
 echo
 echo 'JSON Config:'
