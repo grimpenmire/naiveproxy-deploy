@@ -131,4 +131,14 @@ systemctl daemon-reload
 systemctl enable caddy
 systemctl start caddy
 
+echo "Config URL: naive+https://mahsa:${PASSWORD}@${DOMAIN}:443?udp-over-tcp=true"
+echo
+echo 'JSON Config:'
+echo '{'
+echo '    "listen": "socks://127.0.0.1:1080",'
+echo "    \"proxy\": \"https://mahsa:${PASSWORD}@${DOMAIN}:443\","
+echo '    "log": ""'
+echo '}'
+echo
+
 echo "Done."

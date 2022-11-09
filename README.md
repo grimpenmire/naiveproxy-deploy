@@ -1,3 +1,5 @@
+# Deploying to server
+
 This repository contains a script to setup a [naiveproxy][1] on your
 own server. You also need a domain name with DNS already setup to
 point to your server's IP address.
@@ -13,3 +15,15 @@ You can run the script remotely like this, replacing the values for
 accordingly.
 
     curl -L https://grimpen.one/naive.sh | ssh [user@]<server-ip> -- PASSWORD=<...> DOMAIN=<...> sh
+
+When done, the script prints out a config url and a json config to be
+used in your client of your choice.
+
+# Clients
+
+On Android you can use the SagerNet client. If you manually setup the
+client, do not forget to enable UDP over TCP (if you need voice/video
+calls to work, or anything else requiring UDP).
+
+On Linux, you can put the json config printed by the script in the
+config.json file required by the client.
