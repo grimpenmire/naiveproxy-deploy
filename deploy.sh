@@ -61,14 +61,14 @@ EOF
 
 # Create a systemd service for caddy
 
-groupadd --system caddy
+groupadd --system caddy || true
 useradd --system \
     --gid caddy \
     --create-home \
     --home-dir /var/lib/caddy \
     --shell /usr/sbin/nologin \
     --comment "Caddy web server" \
-    caddy
+    caddy || true
 
 cat >/etc/systemd/system/caddy.service <<EOF
 [Unit]
