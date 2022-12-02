@@ -12,7 +12,7 @@ if [ -z "$DOMAIN" ]; then
     exit 1
 fi
 
-SSL_EMAIL="${VARIABLE:-mahsa@${DOMAIN}}"
+SSL_EMAIL="${SSL_EMAIL:-mahsa@${DOMAIN}}"
 
 # Install packages
 
